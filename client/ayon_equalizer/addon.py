@@ -41,13 +41,25 @@ class EqualizerAddon(AYONAddon, IHostAddon):
 
         """
         startup_path = os.path.join(EQUALIZER_HOST_DIR, "startup")
-        custom_scripts_path = env.get("PYTHON_CUSTOM_SCRIPTS_3DE4")
-        if custom_scripts_path:
-            startup_path = os.pathsep.join(
-                (custom_scripts_path, startup_path)
-            )
+        custom_scripts_path = env.get("PYTHON_CUSTOM_SCRIPTS_3DE4") or ""
 
-        env["PYTHON_CUSTOM_SCRIPTS_3DE4"] = startup_path
+        # Keep the existing folders in order and append the AYON startup
+        # folder. Skip empty entries (e.g. a trailing separator) and
+        # duplicates, so the startup folder is not listed twice when the
+        # value already contains it.
+        paths = []
+        seen = set()
+        for raw_path in [*custom_scripts_path.split(os.pathsep), startup_path]:
+            path = raw_path.strip()
+            if not path:
+                continue
+            key = os.path.normcase(os.path.normpath(path))
+            if key in seen:
+                continue
+            seen.add(key)
+            paths.append(path)
+
+        env["PYTHON_CUSTOM_SCRIPTS_3DE4"] = os.pathsep.join(paths)
         env["AYON_TDE4_HEARTBEAT_INTERVAL"] = str(self.heartbeat)
 
     def get_launch_hook_paths(self) -> list[str]:
